@@ -1,4 +1,4 @@
-import{P as e,Yt as t,fn as n,ln as r,on as i,p as a,st as o,un as s}from"./three-BOMTFBZf.js";import{d as c,l,u}from"./index-CurEIg_z.js";var d={name:`LuminosityHighPassShader`,shaderID:`luminosityHighPass`,uniforms:{tDiffuse:{value:null},luminosityThreshold:{value:1},smoothWidth:{value:1},defaultColor:{value:new a(0)},defaultOpacity:{value:0}},vertexShader:`
+import{P as e,Yt as t,fn as n,ln as r,on as i,p as a,st as o,un as s}from"./three-BOMTFBZf.js";import{d as c,l,u}from"./index-D1F36FBi.js";var d={name:`LuminosityHighPassShader`,shaderID:`luminosityHighPass`,uniforms:{tDiffuse:{value:null},luminosityThreshold:{value:1},smoothWidth:{value:1},defaultColor:{value:new a(0)},defaultOpacity:{value:0}},vertexShader:`
 
 		varying vec2 vUv;
 
