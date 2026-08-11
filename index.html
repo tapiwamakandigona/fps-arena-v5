@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>FPS Arena V4</title>
+  <meta name="theme-color" content="#05060a" />
+  <link rel="icon" type="image/png" href="./assets/icon-192-JD67AjeO.png" />
+  <script type="module" crossorigin src="./assets/index-CurEIg_z.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/three-BOMTFBZf.js">
+  <link rel="stylesheet" crossorigin href="./assets/index-DBNZYY9w.css">
+</head>
+<body>
+  <div id="game-container">
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD -->
+    <div id="hud" class="hidden">
+      <div id="crosshair">
+        <span class="ch ch-t"></span><span class="ch ch-b"></span>
+        <span class="ch ch-l"></span><span class="ch ch-r"></span>
+      </div>
+      <div id="score">SCORE: <span id="score-val">0</span></div>
+      <div id="wave-indicator">WAVE <span id="wave-val">1</span><span id="wave-total"> / 5</span></div>
+      <!-- OPS missions (M6 W2): objective status bar — uplink HP / dustoff hold -->
+      <div id="mission-status" class="hidden" data-state="ok">
+        <span id="mission-status-label">UPLINK</span>
+        <div id="mission-track"><div id="mission-fill"></div></div>
+      </div>
+      <div id="health">
+        <div id="health-bar"><div id="health-fill"></div></div>
+        <span id="health-text">100/100 HP</span>
+        <div id="stamina-bar"><div id="stamina-fill"></div></div>
+      </div>
+      <div id="ammo">
+        <div id="ammo-name">PISTOL</div>
+        <div id="ammo-counts"><span id="ammo-mag">12</span>/<span id="ammo-max">12</span> <span class="reload-key">[R]</span></div>
+        <div id="ammo-reserve">Reserve: <span id="ammo-res">∞</span></div>
+        <div id="ammo-nade">Grenades: <span id="nade-count">3</span> <span class="reload-key">[G]</span></div>
+        <div id="ammo-flash">Flashbangs: <span id="flash-count">2</span> <span class="reload-key">[F]</span></div>
+      </div>
+      <div id="boss-bar">
+        <div id="boss-name">THE BUTCHER</div>
+        <div id="boss-track"><div id="boss-fill"></div></div>
+      </div>
+      <div id="combo"></div>
+      <div id="center-msg"></div>
+      <div id="hitmarker"></div>
+      <div id="scope-overlay" class="hidden">
+        <div class="scope-ring"></div>
+        <div class="scope-hair h"></div>
+        <div class="scope-hair v"></div>
+        <div class="scope-mildots"></div>
+      </div>
+      <div id="sight-overlay" class="hidden" data-kind="">
+        <div class="sight-ring"></div>
+        <div class="sight-dot"></div>
+        <div class="sight-chev"></div>
+      </div>
+      <div id="low-health"></div>
+      <div id="damage-vignette"></div>
+      <div id="flash-overlay"></div>
+      <div id="death-fade"></div>
+      <div id="daily-tag" class="hidden">DAILY <span id="daily-date"></span></div>
+      <div id="mutator-tag" class="hidden">MUTATORS ON — SCORE NOT SUBMITTED</div>
+    </div>
+
+    <!-- Main menu — v3.4 LOBBY: left rail, center weapon stage, PLAY cluster
+         bottom-right, DAILY tile bottom-left, coin chip top-right. The live
+         arena orbits dimmed behind the scrim (Game drives the camera). -->
+    <div id="menu" class="overlay lobby">
+      <div id="lobby-top">
+        <div id="lobby-title">
+          <h1>FPS ARENA <span id="lobby-ver">V4</span></h1>
+          <span id="lobby-sub">WAREHOUSE: CONTAINMENT</span>
+        </div>
+        <div id="lobby-top-right">
+          <div id="coin-chip" title="Coins — spend them in the ARMORY">&#129689; <span id="coin-count">0</span></div>
+          <button id="fullscreen-btn" aria-label="Toggle fullscreen"><svg width="18" height="18" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 6 V2 h4 M10 2 h4 v4 M14 10 v4 h-4 M6 14 H2 v-4"/></svg></button>
+        </div>
+      </div>
+      <nav id="lobby-rail">
+        <button id="armory-btn" class="rail-btn"><span class="rail-ico">&#9876;</span><span class="rail-label">ARMORY</span></button>
+        <button id="lb-btn" class="rail-btn"><span class="rail-ico">&#127942;</span><span class="rail-label">RANKS</span></button>
+        <button id="prog-btn" class="rail-btn"><span class="rail-ico">&#9733;</span><span class="rail-label">PROGRESS</span></button>
+        <button id="settings-btn" class="rail-btn"><span class="rail-ico">&#9881;</span><span class="rail-label">SETTINGS</span></button>
+      </nav>
+      <div id="lobby-stage">
+        <canvas id="stage-canvas" width="520" height="300"></canvas>
+        <div id="stage-name">PISTOL</div>
+        <div id="stage-flavor">Reliable sidearm.</div>
+        <div id="equip-chips"></div>
+        <p class="best">Best: <span id="menu-best">—</span> &nbsp;·&nbsp; Endless best: <span id="menu-best-wave">—</span></p>
+      </div>
+      <button id="daily-btn" class="daily-tile">
+        <span class="daily-head"><span class="daily-dot"></span>DAILY CHALLENGE <span id="daily-state"></span></span>
+        <span class="daily-note">Standard-issue arsenal — everyone runs the same kit.</span>
+        <span class="daily-reset">resets in <span id="daily-countdown">--:--:--</span></span>
+      </button>
+      <div id="play-cluster">
+        <div id="play-mods">
+          <button id="endless-btn" class="mod-cycler">MODE: CAMPAIGN</button>
+          <button id="ops-mission-btn" class="mod-cycler hidden">MISSION: HOLDOUT</button>
+          <div id="arena-select">
+            <button id="arena-prev" class="arena-arrow">&#9664;</button>
+            <span>ARENA: <span id="arena-name">WAREHOUSE</span></span>
+            <button id="arena-next" class="arena-arrow">&#9654;</button>
+          </div>
+          <button id="range-btn" class="mod-cycler">&#127919; TRAINING RANGE</button>
+        </div>
+        <button id="start-btn">CLICK TO PLAY</button>
+      </div>
+      <div class="controls-help">
+        <span><b>WASD</b> move</span><span><b>Mouse</b> look</span><span><b>Click</b> shoot</span>
+        <span><b>R</b> reload</span><span><b>1-7</b> weapons</span><span><b>Esc</b> pause</span>
+      </div>
+    </div>
+
+    <!-- ARMORY: permanent gun unlocks bought with coins (v3.4 economy). -->
+    <div id="armory" class="overlay lobby-panel hidden">
+      <div class="panel armory-panel">
+        <h2>ARMORY</h2>
+        <p class="tagline" id="armory-note">Your arsenal starts with the Pistol. Clear waves to earn coins — every gun here is earned, not given.</p>
+        <div id="armory-grid"></div>
+        <button id="armory-close" class="btn-secondary">CLOSE</button>
+      </div>
+    </div>
+
+    <div id="pause" class="overlay hidden">
+      <div class="panel">
+        <h2>PAUSED</h2>
+        <p class="pause-stats">Score: <span id="pause-score">0</span> &nbsp;·&nbsp; Wave <span id="pause-wave">1</span></p>
+        <button id="resume-btn">RESUME</button>
+        <button id="restart-btn-pause" class="btn-secondary">RESTART</button>
+        <button id="settings-btn-pause" class="btn-secondary">SETTINGS</button>
+        <button id="quit-btn-pause" class="btn-secondary">QUIT TO MENU</button>
+        <p class="pause-help"><b>WASD</b> move · <b>Shift</b> sprint · <b>R</b> reload · <b>1-7</b> weapons · <b>G</b> grenade · <b>F</b> flashbang</p>
+      </div>
+    </div>
+
+    <div id="endscreen" class="overlay hidden">
+      <div class="panel">
+        <h1 id="end-title">GAME OVER</h1>
+        <p id="end-sub"></p>
+        <p class="score-line">Score: <span id="end-score">0</span></p>
+        <p class="best-line" id="end-best"></p>
+        <div class="end-stats">
+          <div class="end-stat"><span class="end-stat-val" id="end-kills">0</span><span class="end-stat-label">KILLS</span></div>
+          <div class="end-stat"><span class="end-stat-val" id="end-acc">0%</span><span class="end-stat-label">ACCURACY</span></div>
+          <div class="end-stat"><span class="end-stat-val" id="end-waves">0</span><span class="end-stat-label">WAVES</span></div>
+        </div>
+        <div class="end-stats end-stats-extra">
+          <div class="end-stat"><span class="end-stat-val end-stat-sm" id="end-headshots">0</span><span class="end-stat-label">HEADSHOTS</span></div>
+          <div class="end-stat"><span class="end-stat-val end-stat-sm" id="end-time">0:00</span><span class="end-stat-label">TIME</span></div>
+          <div class="end-stat"><span class="end-stat-val end-stat-sm" id="end-dmgdealt">0</span><span class="end-stat-label">DMG DEALT</span></div>
+          <div class="end-stat"><span class="end-stat-val end-stat-sm" id="end-dmgtaken">0</span><span class="end-stat-label">DMG TAKEN</span></div>
+          <div class="end-stat"><span class="end-stat-val end-stat-sm" id="end-combo">0</span><span class="end-stat-label">BEST COMBO</span></div>
+          <div class="end-stat"><span class="end-stat-val end-stat-sm" id="end-favweapon">—</span><span class="end-stat-label">FAV WEAPON</span></div>
+        </div>
+        <p id="end-mutnote" class="hidden">MUTATORS ON — score not submitted</p>
+        <!-- v3.4 coin tally: "+N coins" breakdown + nearest-unowned-gun progress -->
+        <div id="end-coins" class="hidden">
+          <div id="end-coins-total">+0 &#129689;</div>
+          <div id="end-coins-breakdown"></div>
+          <div id="end-goal" class="hidden">
+            <div id="end-goal-label"></div>
+            <div id="end-goal-bar"><div id="end-goal-fill"></div></div>
+          </div>
+        </div>
+        <div id="lb-submit">
+          <input id="lb-name" maxlength="24" placeholder="YOUR NAME" autocomplete="off">
+          <button id="lb-submit-btn" class="btn-secondary">SUBMIT SCORE</button>
+          <span id="lb-submit-status"></span>
+        </div>
+        <button id="restart-btn">PLAY AGAIN</button>
+        <button id="menu-btn" class="btn-secondary">MENU</button>
+      </div>
+    </div>
+
+    <div id="leaderboard" class="overlay lobby-panel hidden">
+      <div class="panel">
+        <h2>LEADERBOARD</h2>
+        <p class="tagline" id="lb-sub">GLOBAL TOP 10</p>
+        <div id="lb-tabs">
+          <button class="lb-tab active" data-mode="campaign">CAMPAIGN</button>
+          <button class="lb-tab" data-mode="endless">ENDLESS</button>
+          <button class="lb-tab" data-mode="daily">TODAY'S DAILY</button>
+        </div>
+        <div id="lb-list"></div>
+        <button id="lb-close" class="btn-secondary">CLOSE</button>
+      </div>
+    </div>
+
+    <div id="progression" class="overlay lobby-panel hidden">
+      <div class="panel">
+        <h2>PROGRESSION</h2>
+        <p class="tagline" id="prog-sub"></p>
+        <div id="prog-list"></div>
+        <div id="prog-controls">
+          <div class="prog-group">
+            <div class="prog-group-title">LOADOUT</div>
+            <button class="prog-toggle" data-unlock="smg" data-kind="loadout">START WITH SMG <span class="prog-toggle-state">🔒</span></button>
+            <button class="prog-toggle" data-unlock="goldPistol" data-kind="loadout">GOLD PISTOL <span class="prog-toggle-state">🔒</span></button>
+          </div>
+          <div class="prog-group">
+            <div class="prog-group-title">MUTATORS <span class="prog-warn">— no leaderboard / stats</span></div>
+            <button class="prog-toggle" data-unlock="oneshot" data-kind="mutator">ONE-SHOT <span class="prog-toggle-state">🔒</span></button>
+            <button class="prog-toggle" data-unlock="lowgrav" data-kind="mutator">LOW GRAVITY <span class="prog-toggle-state">🔒</span></button>
+            <button class="prog-toggle" data-unlock="bighead" data-kind="mutator">BIG HEAD <span class="prog-toggle-state">🔒</span></button>
+          </div>
+        </div>
+        <button id="prog-close" class="btn-secondary">CLOSE</button>
+      </div>
+    </div>
+
+    <div id="loading" class="overlay">
+      <div class="panel"><h2>Loading…</h2><p class="tagline">Fetching engine</p></div>
+    </div>
+
+    <!-- Landscape-only prompt (touch, portrait orientation) -->
+    <div id="rotate-overlay">
+      <div class="rotate-card">
+        <div class="rotate-icon">&#128241;</div>
+        <h2>ROTATE YOUR DEVICE</h2>
+        <p>FPS Arena plays in landscape.</p>
+      </div>
+    </div>
+
+    <!-- In-game fullscreen toggle (touch only) -->
+    <button id="fs-toggle" class="touch-only" aria-label="Toggle fullscreen"><svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 6 V2 h4 M10 2 h4 v4 M14 10 v4 h-4 M6 14 H2 v-4"/></svg></button>
+    <!-- Build version stamp (confirms you're on the latest deploy) -->
+    <div id="build-tag"></div>
+  </div>
+
+</body>
+</html>
