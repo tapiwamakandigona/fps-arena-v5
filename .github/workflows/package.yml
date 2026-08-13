@@ -59,10 +59,16 @@ jobs:
           cache: true
       - name: Bundle web game into shell assets
         run: python3 packaging/sync_assets.py
-      - name: Build release APK
+      - name: Fetch deps and patch flutter_inappwebview for new AGP
         working-directory: packaging/shell
         run: |
           flutter pub get
+          PC="${PUB_CACHE:-$HOME/.pub-cache}"
+          sed -i "s/getDefaultProguardFile('proguard-android.txt')/getDefaultProguardFile('proguard-android-optimize.txt')/" "$PC"/hosted/pub.dev/flutter_inappwebview_android-*/android/build.gradle
+          grep -q "proguard-android-optimize.txt" "$PC"/hosted/pub.dev/flutter_inappwebview_android-*/android/build.gradle
+      - name: Build release APK
+        working-directory: packaging/shell
+        run: |
           flutter test
           flutter build apk --release
       - name: Verify APK contains the game
@@ -99,6 +105,11 @@ jobs:
         run: python packaging/sync_assets.py
       - name: Build Windows release
         working-directory: packaging/shell
+        env:
+          # New MSVC hard-errors on <experimental/coroutine> used by
+          # flutter_inappwebview_windows; the STL error message says to
+          # define this to keep building for now.
+          CL: /D_SILENCE_EXPERIMENTAL_COROUTINE_DEPRECATION_WARNINGS
         run: |
           flutter pub get
           flutter build windows --release
