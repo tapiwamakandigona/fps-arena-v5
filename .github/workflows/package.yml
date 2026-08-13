@@ -1,0 +1,117 @@
+name: package
+
+# Runs on the PUBLIC repo (free Actions minutes) but builds the PRIVATE
+# source checked out with the SRC_REPO_TOKEN secret.
+
+# Builds the shippable native packages from the current web game:
+#   - Android APK  (ubuntu runner, Flutter + Java 17)
+#   - Windows EXE  (windows runner, Flutter + MSVC, zipped Release folder)
+# Trigger manually (workflow_dispatch) or by pushing a v* tag.
+
+on:
+  workflow_dispatch:
+
+env:
+  FLUTTER_CHANNEL: stable
+
+jobs:
+  web-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: tapiwamakandigona/fps-game-version-5
+          token: ${{ secrets.SRC_REPO_TOKEN }}
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx vite build
+      - run: test -f dist/index.html && test -f dist/models/weapons/revolver.glb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: dist/
+          retention-days: 7
+
+  android-apk:
+    needs: web-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: tapiwamakandigona/fps-game-version-5
+          token: ${{ secrets.SRC_REPO_TOKEN }}
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist/
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - name: Bundle web game into shell assets
+        run: python3 packaging/sync_assets.py
+      - name: Build release APK
+        working-directory: packaging/shell
+        run: |
+          flutter pub get
+          flutter test
+          flutter build apk --release
+      - name: Verify APK contains the game
+        run: |
+          APK=packaging/shell/build/app/outputs/flutter-apk/app-release.apk
+          test -f "$APK"
+          unzip -l "$APK" | grep -q 'assets/game/index.html'
+          unzip -l "$APK" | grep -q 'assets/game/models/weapons/revolver.glb'
+          ls -la "$APK"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fps-arena-android-apk
+          path: packaging/shell/build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+  windows-exe:
+    needs: web-build
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          repository: tapiwamakandigona/fps-game-version-5
+          token: ${{ secrets.SRC_REPO_TOKEN }}
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          name: web-dist
+          path: dist/
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: ${{ env.FLUTTER_CHANNEL }}
+          cache: true
+      - name: Bundle web game into shell assets
+        run: python packaging/sync_assets.py
+      - name: Build Windows release
+        working-directory: packaging/shell
+        run: |
+          flutter pub get
+          flutter build windows --release
+      - name: Verify and zip Release folder
+        shell: pwsh
+        run: |
+          $rel = 'packaging/shell/build/windows/x64/runner/Release'
+          if (!(Test-Path "$rel/fps_arena_shell.exe")) { throw 'EXE missing' }
+          if (!(Test-Path "$rel/data/flutter_assets/assets/game/index.html")) { throw 'game assets missing' }
+          Compress-Archive -Path "$rel/*" -DestinationPath fps-arena-windows.zip
+          Get-Item fps-arena-windows.zip | Format-List Name,Length
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fps-arena-windows-exe
+          path: fps-arena-windows.zip
+          retention-days: 30
