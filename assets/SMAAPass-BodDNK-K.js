@@ -1,4 +1,4 @@
-import{P as e,Y as t,Yt as n,fn as r,ln as i,on as a,pt as o,rn as s}from"./three-BOMTFBZf.js";import{d as c,f as l}from"./index-CLhEVyEc.js";var u={name:`SMAAEdgesShader`,defines:{SMAA_THRESHOLD:`0.1`},uniforms:{tDiffuse:{value:null},resolution:{value:new i(1/1024,1/512)}},vertexShader:`
+import{P as e,Y as t,Yt as n,fn as r,ln as i,on as a,pt as o,rn as s}from"./three-BOMTFBZf.js";import{f as c,p as l}from"./index-BSWNtf1n.js";var u={name:`SMAAEdgesShader`,defines:{SMAA_THRESHOLD:`0.1`},uniforms:{tDiffuse:{value:null},resolution:{value:new i(1/1024,1/512)}},vertexShader:`
 
 		uniform vec2 resolution;
 
